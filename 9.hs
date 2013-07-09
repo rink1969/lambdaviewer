@@ -55,6 +55,7 @@ f &&& g = \s -> [ ((x, y), s2)
 --f ||| g = \s -> map right (f s) ++ map right (g s)
 --  where left  (x, s) = (Left  x, s)
 --        right (y, s) = (Right y, s)
+
 f ||| g = \s -> case f s of
                   [] -> map right (g s)
                   xs -> map left xs
@@ -73,13 +74,11 @@ many r  = many1 r <|> nil
 many1 r = mapP cons (r &&& many r)
   where cons (x, xs) = x : xs
 
-variables = mapP f (many (schar isAlpha))
+variables = mapP f (many1 (schar isAlpha))
 	where f s = V s
 
 term, termf, atom :: ReadS Term
-term  = mapP (f id) (many1 termf)
-    where f g [x]    = x
-          f g (x:xs) = f (App (g x)) xs
+term = mapP (foldl1 App) (many1 termf)
 termf = mapP f ((space ||| nil) &&& atom &&& (space ||| nil))
   where f ((_, x), _) = x
 atom = lam <|> var <|> (paren term)
@@ -98,3 +97,5 @@ paren p = mapP f (sym '(' &&& p &&& sym ')')
     where f ((_, x), _) = x
 
 
+instance Read Term where
+    readsPrec _ = term
