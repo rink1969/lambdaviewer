@@ -77,14 +77,12 @@ many1 r = mapP cons (r &&& many r)
 variables = mapP f (many1 (schar isAlpha))
 	where f s = V s
 
-term, termf, atom :: ReadS Term
-term = mapP (foldl1 App) (many1 termf)
-termf = mapP f ((space ||| nil) &&& atom &&& (space ||| nil))
-  where f ((_, x), _) = x
-atom = lam <|> var <|> (paren term)
-var = mapP f variables
+term, atom :: ReadS Term
+term = mapP (foldl1 App) (many1 atom)
+atom = (trim lam) <|> (trim var) <|> (trim (paren term))
+var = mapP f (trim variables)
   where f v = Var v
-lam  = mapP f (lbd &&& variables &&& (sym '.') &&& term)
+lam  = mapP f ((trim lbd) &&& (trim variables) &&& (trim (sym '.')) &&& (trim term))
   where f (((_,v),_),e) = Lam v e
 app  = mapP f (term &&& space &&& term)
   where f ((f, _), e) = App f e
@@ -94,6 +92,10 @@ sym c = schar (==c)
 
 paren :: ReadS b -> ReadS b
 paren p = mapP f (sym '(' &&& p &&& sym ')')
+    where f ((_, x), _) = x
+
+trim :: ReadS b -> ReadS b
+trim p = mapP f ((space ||| nil) &&& p &&& (space ||| nil))
     where f ((_, x), _) = x
 
 
